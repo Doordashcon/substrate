@@ -81,6 +81,7 @@ pub fn config_endowed(code: Option<&[u8]>, extra_endowed: Vec<AccountId>) -> Gen
 		authority_discovery: Default::default(),
 		democracy: Default::default(),
 		council: Default::default(),
+		nomination_pools: Default::default(),
 		technical_committee: Default::default(),
 		technical_membership: Default::default(),
 		elections: Default::default(),

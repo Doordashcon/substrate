@@ -483,11 +483,11 @@ impl<T: Config> BondedPool<T> {
 		//
 		// If we cap the ratio of points:balance so one cannot join a pool that has been slashed
 		// 90%,
-		ensure!(points_to_balance_ratio_floor < 10u32.into(), Error::<T>::OverflowRisk);
+		ensure!(points_to_balance_ratio_floor < T::PoolSizeMax::get().into(), Error::<T>::OverflowRisk);
 		// while restricting the balance to 1/10th of max total issuance,
 		ensure!(
 			new_funds.saturating_add(bonded_balance) <
-				BalanceOf::<T>::max_value().div(10u32.into()),
+				BalanceOf::<T>::max_value().div(T::PoolSizeMax::get().into()),
 			Error::<T>::OverflowRisk
 		);
 		// then we can be decently confident the bonding pool points will not overflow
@@ -754,6 +754,9 @@ pub mod pallet {
 		/// points to balance; once the `with_era` pool is merged into the `no_era` pool, the ratio
 		/// can become skewed due to some slashed ratio getting merged in at some point.
 		type PostUnbondingPoolsWindow: Get<u32>;
+
+		#[pallet::constant]
+		type PoolSizeMax: Get<u32>;
 	}
 
 	/// Minimum amount to bond to join a pool.
@@ -802,7 +805,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { min_join_bond: Zero::zero(), min_create_bond: Zero::zero(), max_pools: Some(10) }
+			Self { min_join_bond: Zero::zero(), min_create_bond: Zero::zero(), max_pools: Some(T::PoolSizeMax::get()) }
 		}
 	}
 
