@@ -483,7 +483,10 @@ impl<T: Config> BondedPool<T> {
 		//
 		// If we cap the ratio of points:balance so one cannot join a pool that has been slashed
 		// 90%,
-		ensure!(points_to_balance_ratio_floor < T::PoolSizeMax::get().into(), Error::<T>::OverflowRisk);
+		ensure!(
+			points_to_balance_ratio_floor < T::PoolSizeMax::get().into(),
+			Error::<T>::OverflowRisk
+		);
 		// while restricting the balance to 1/10th of max total issuance,
 		ensure!(
 			new_funds.saturating_add(bonded_balance) <
@@ -805,7 +808,11 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { min_join_bond: Zero::zero(), min_create_bond: Zero::zero(), max_pools: Some(T::PoolSizeMax::get()) }
+			Self {
+				min_join_bond: Zero::zero(),
+				min_create_bond: Zero::zero(),
+				max_pools: Some(T::PoolSizeMax::get()),
+			}
 		}
 	}
 
