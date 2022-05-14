@@ -993,7 +993,7 @@ pub mod pallet {
 			};
 
 			let submission =
-				SignedSubmission { who: who.clone(), deposit, raw_solution: *raw_solution, reward };
+				SignedSubmission { who: who.clone(), deposit, raw_solution: *raw_solution, reward, checked_solution: false };
 
 			// insert the submission if the queue has space or it's better than the weakest
 			// eject the weakest if the queue was full
@@ -1085,7 +1085,19 @@ pub mod pallet {
 					Ok(solution) => {
 						let _ = T::Currency::slash(&who, submission.deposit);
 						<QueuedSolution<T>>::put(solution);
-						let _ = signed_submissions.pop(submission.raw_solution.score);
+                        
+                        // unreserve deposit.
+                        let _remaining = T::Currency::unreserve(&submission.who, submission.deposit);
+                        debug_assert!(_remaining.is_zero());
+                        
+                        // Reward.
+                        let positive_imbalance = T::Currency::deposit_creating(&submission.who, submission.reward);
+                        T::RewardHandler::on_unbalanced(positive_imbalance);
+                        
+                        // update feasibility check status in storage
+                        signed_submissions.get_checked(index);
+                        signed_submissions.put();
+
 						Self::deposit_event(Event::Challenged { account: who, outcome: false });
 						Ok(())
 					},
@@ -2107,6 +2119,10 @@ mod tests {
 				MultiPhase::signed_submissions().iter().map(|s| s.reward).collect::<Vec<_>>(),
 				vec![15]
 			);
+            assert_eq!(
+                MultiPhase::signed_submissions().iter().map(|s| s.checked_solution).collect::<Vec<_>>(),
+                vec![true]
+            );
 		})
 	}
 

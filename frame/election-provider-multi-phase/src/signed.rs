@@ -53,6 +53,8 @@ pub struct SignedSubmission<AccountId, Balance: HasCompact, Solution> {
 	pub raw_solution: RawSolution<Solution>,
 	/// The reward that should potentially be paid for this solution, if accepted.
 	pub reward: Balance,
+
+    pub checked_solution: bool,
 }
 
 impl<AccountId, Balance, Solution> Ord for SignedSubmission<AccountId, Balance, Solution>
@@ -325,6 +327,15 @@ impl<T: Config> SignedSubmissions<T> {
 	pub fn pop(&mut self, remove_score: ElectionScore) -> Option<SignedSubmissionOf<T>> {
 		self.swap_out_submission(remove_score, None)
 	}
+
+    pub fn get_checked(&mut self, index: u32) {
+        for (key, value) in self.insertion_overlay.iter_mut() {
+            if key == &index {
+                value.checked_solution = true;
+                self.insertion_overlay.insert(index, *value);
+            }
+        }
+    }
 }
 
 impl<T: Config> Deref for SignedSubmissions<T> {
@@ -367,7 +378,7 @@ impl<T: Config> Pallet<T> {
 			Self::snapshot_metadata().unwrap_or_default();
 
 		while let Some(best) = all_submissions.pop_last() {
-			let SignedSubmission { raw_solution, who, deposit, reward } = best;
+			let SignedSubmission { raw_solution, who, deposit, reward, checked_solution} = best;
 			let active_voters = raw_solution.solution.voter_count() as u32;
 			let feasibility_weight = {
 				// defensive only: at the end of signed phase, snapshot will exits.
@@ -376,26 +387,28 @@ impl<T: Config> Pallet<T> {
 			};
 			// the feasibility check itself has some weight
 			weight = weight.saturating_add(feasibility_weight);
-			match Self::feasibility_check(raw_solution, ElectionCompute::Signed) {
-				Ok(ready_solution) => {
-					Self::finalize_signed_phase_accept_solution(
-						ready_solution,
-						&who,
-						deposit,
-						reward,
-					);
-					found_solution = true;
+            if !checked_solution {
+			    match Self::feasibility_check(raw_solution, ElectionCompute::Signed) {
+				    Ok(ready_solution) => {
+					    Self::finalize_signed_phase_accept_solution(
+						    ready_solution,
+						    &who,
+						    deposit,
+						    reward,
+					    );
+					    found_solution = true;
 
-					weight = weight
-						.saturating_add(T::WeightInfo::finalize_signed_phase_accept_solution());
-					break
-				},
-				Err(_) => {
-					Self::finalize_signed_phase_reject_solution(&who, deposit);
-					weight = weight
-						.saturating_add(T::WeightInfo::finalize_signed_phase_reject_solution());
-				},
-			}
+					    weight = weight
+						    .saturating_add(T::WeightInfo::finalize_signed_phase_accept_solution());
+					    break
+				    },
+				    Err(_) => {
+					    Self::finalize_signed_phase_reject_solution(&who, deposit);
+					    weight = weight
+						    .saturating_add(T::WeightInfo::finalize_signed_phase_reject_solution());
+				    },
+			    }
+            }
 		}
 
 		// Any unprocessed solution is pointless to even consider. Feasible or malicious,
