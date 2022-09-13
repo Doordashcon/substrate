@@ -410,9 +410,6 @@ pub mod pallet {
 		/// The keys.
 		type Keys: OpaqueKeys + Member + Parameter + MaybeSerializeDeserialize;
 
-		/// The maximum number of validators that this pallet can have.
-		type MaxActiveValidators: Get<u32>;
-
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
@@ -473,7 +470,6 @@ pub mod pallet {
 				!initial_validators_0.is_empty(),
 				"Empty validator set for session 0 in genesis block!"
 			);
-			assert!(initial_validators_0.len() as u32 <= T::MaxActiveValidators::get(), "exceeds the current amount of active validators");
 
 			let initial_validators_1 = T::SessionManager::new_session_genesis(1)
 				.unwrap_or_else(|| initial_validators_0.clone());
@@ -481,7 +477,6 @@ pub mod pallet {
 				!initial_validators_1.is_empty(),
 				"Empty validator set for session 1 in genesis block!"
 			);
-			assert!(initial_validators_1.len() as u32 <= T::MaxActiveValidators::get(), "exceeds the current amount of active validators");
 
 			let queued_keys: Vec<_> = initial_validators_1
 				.iter()
@@ -507,7 +502,7 @@ pub mod pallet {
 	/// The current set of validators.
 	#[pallet::storage]
 	#[pallet::getter(fn validators)]
-	pub type Validators<T: Config> = StorageValue<_, Vec<T::ValidatorId>, ValueQuery>; // Bound this
+	pub type Validators<T: Config> = StorageValue<_, Vec<T::ValidatorId>, ValueQuery>;
 
 	/// Current index of the session.
 	#[pallet::storage]
@@ -523,7 +518,7 @@ pub mod pallet {
 	/// will be used to determine the validator's session keys.
 	#[pallet::storage]
 	#[pallet::getter(fn queued_keys)]
-	pub type QueuedKeys<T: Config> = StorageValue<_, Vec<(T::ValidatorId, T::Keys)>, ValueQuery>; // Bound this
+	pub type QueuedKeys<T: Config> = StorageValue<_, Vec<(T::ValidatorId, T::Keys)>, ValueQuery>;
 
 	/// Indices of disabled validators.
 	///
@@ -532,7 +527,7 @@ pub mod pallet {
 	/// a new set of identities.
 	#[pallet::storage]
 	#[pallet::getter(fn disabled_validators)]
-	pub type DisabledValidators<T> = StorageValue<_, Vec<u32>, ValueQuery>; // Bound this
+	pub type DisabledValidators<T> = StorageValue<_, Vec<u32>, ValueQuery>;
 
 	/// The next session keys for a validator.
 	#[pallet::storage]
@@ -667,12 +662,11 @@ impl<T: Config> Pallet<T> {
 
 		// Get next validator set.
 		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
-			let (next_validators, next_identities_changed) =
+		let (next_validators, next_identities_changed) =
 			if let Some(validators) = maybe_next_validators {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
 				// the validator set as having changed even if the validators are the
 				// same as before, as underlying economic conditions may have changed.
-				debug_assert!(validators.len() as u32 <= T::MaxActiveValidators::get(), "exceeds the current amount of active validators");
 				(validators, true)
 			} else {
 				(Validators::<T>::get(), false)

@@ -86,7 +86,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn historical_root)]
 	pub type HistoricalSessions<T: Config> =
-		StorageMap<_, Twox64Concat, SessionIndex, (T::Hash, ValidatorCount), OptionQuery>; // Bound this
+		StorageMap<_, Twox64Concat, SessionIndex, (T::Hash, ValidatorCount), OptionQuery>;
 
 	/// The range of historical sessions we store. [first, last)
 	#[pallet::storage]
