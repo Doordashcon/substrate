@@ -46,7 +46,7 @@
 
 mod block_rules;
 mod call_executor;
-mod client;
+pub mod client;
 mod wasm_override;
 mod wasm_substitutes;
 
